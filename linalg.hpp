@@ -167,6 +167,27 @@ public:
     }
 
     /**
+     * @brief 拷贝构造函数
+     * @param other 要拷贝的矩阵
+     */
+    Matrix(const Matrix& other) 
+        : data(other.data), rows(other.rows), cols(other.cols) {}
+
+    /**
+     * @brief 赋值运算符
+     * @param other 要赋值的矩阵
+     * @return 对this的引用
+     */
+    Matrix& operator=(const Matrix& other) {
+        if (this != &other) {
+            data = other.data;
+            rows = other.rows;
+            cols = other.cols;
+        }
+        return *this;
+    }
+
+    /**
      * @brief 访问矩阵元素
      * @param i 行索引
      * @param j 列索引
