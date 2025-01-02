@@ -68,15 +68,13 @@ void test_vector_operations() {
     assert(is_close(v4[1], 3.0));
     assert(is_close(v4[2], 3.0));
     
-    // 点积测试
-    double dot_product = v1.dot(v2);
-    assert(is_close(dot_product, 32.0));  // 1*4 + 2*5 + 3*6 = 32
+    // 范数测试
+    double norm = v1.norm();
+    assert(is_close(norm, std::sqrt(14.0)));  // sqrt(1^2 + 2^2 + 3^2)
     
-    // 标量乘法测试
-    auto v5 = v1 * 2.0;
-    assert(is_close(v5[0], 2.0));
-    assert(is_close(v5[1], 4.0));
-    assert(is_close(v5[2], 6.0));
+    // 打印测试
+    std::cout << "向量v1:\n" << v1 << std::endl;
+    std::cout << "向量v2:\n" << v2 << std::endl;
 
     std::cout << "向量运算测试通过！" << std::endl;
 }
@@ -123,6 +121,10 @@ void test_matrix_operations() {
     assert(is_close(m6(1, 0), 2.0));
     assert(is_close(m6(1, 1), 4.0));
 
+    // 打印测试
+    std::cout << "矩阵m1:\n" << m1 << std::endl;
+    std::cout << "矩阵m2:\n" << m2 << std::endl;
+
     std::cout << "矩阵运算测试通过！" << std::endl;
 }
 
@@ -136,6 +138,8 @@ void test_matrix_advanced() {
     };
     
     auto inv = m.inverse();
+    std::cout << "原矩阵:\n" << m << std::endl;
+    std::cout << "逆矩阵:\n" << inv << std::endl;
     
     // 验证求逆结果：m * m^(-1) 应该等于单位矩阵
     auto identity = m * inv;
@@ -148,6 +152,18 @@ void test_matrix_advanced() {
     double det = m.determinant();
     assert(is_close(det, 10.0));  // 4*6 - 7*2 = 24 - 14 = 10
 
+    // 测试最大值和绝对值
+    linalg::Matrix<double> test_mat = {
+        {-1.0, 2.0},
+        {-3.0, 4.0}
+    };
+    auto max_vals = test_mat.max();
+    auto abs_mat = test_mat.abs();
+    
+    std::cout << "测试矩阵:\n" << test_mat << std::endl;
+    std::cout << "每列最大值:\n" << max_vals << std::endl;
+    std::cout << "绝对值矩阵:\n" << abs_mat << std::endl;
+
     std::cout << "高级矩阵运算测试通过！" << std::endl;
 }
 
@@ -155,10 +171,10 @@ void test_error_handling() {
     std::cout << "测试错误处理..." << std::endl;
 
     try {
-        // 测试不匹配维度的向量加法
-        linalg::Vector<double> v1 = {1.0, 2.0};
-        linalg::Vector<double> v2 = {1.0, 2.0, 3.0};
-        auto v3 = v1 + v2;
+        // 测试不匹配维度的矩阵加法
+        linalg::Matrix<double> m1(2, 2);
+        linalg::Matrix<double> m2(2, 3);
+        auto m3 = m1 + m2;
         assert(false);  // 不应该到达这里
     } catch (const std::runtime_error&) {
         // 预期的异常

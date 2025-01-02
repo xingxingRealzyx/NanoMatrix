@@ -15,112 +15,76 @@
 #include <stdexcept>
 #include <iostream>
 #include <cmath>
+#include <sstream>
 
 namespace linalg {
 
+// 前向声明
+template<typename T> class Matrix;
+
 /**
- * @brief 向量类
+ * @brief 向量类（作为矩阵的特例）
  * @tparam T 数值类型
- * 
- * 提供基本的向量运算功能，包括加减法、点积和标量乘法。
  */
 template<typename T>
-class Vector {
-private:
-    std::vector<T> data;  ///< 存储向量数据
-
+class Vector : public Matrix<T> {
 public:
     /** @brief 默认构造函数 */
-    Vector() = default;
+    Vector() : Matrix<T>(0, 1) {}
     
     /**
      * @brief 指定大小构造函数
      * @param size 向量维度
      */
-    Vector(size_t size) : data(size) {}
+    explicit Vector(size_t size) : Matrix<T>(size, 1) {}
     
     /**
      * @brief 初始化列表构造函数
      * @param list 初始化数据
      */
-    Vector(std::initializer_list<T> list) : data(list) {}
+    Vector(std::initializer_list<T> list) 
+        : Matrix<T>(list.size(), 1) {
+        size_t i = 0;
+        for (const auto& val : list) {
+            (*this)[i++] = val;
+        }
+    }
+
+    /**
+     * @brief 从矩阵构造向量（必须是列向量）
+     * @param mat 输入矩阵
+     * @throw std::runtime_error 当输入矩阵不是列向量时抛出
+     */
+    explicit Vector(const Matrix<T>& mat) {
+        if (mat.get_cols() != 1) {
+            throw std::runtime_error("只能从列向量矩阵构造向量");
+        }
+        *this = Vector(mat.get_rows());
+        for (size_t i = 0; i < mat.get_rows(); ++i) {
+            (*this)[i] = mat(i,0);
+        }
+    }
 
     /**
      * @brief 访问向量元素
      * @param i 索引
      * @return 对元素的引用
      */
-    T& operator[](size_t i) noexcept { return data[i]; }
-    const T& operator[](size_t i) const noexcept { return data[i]; }
+    T& operator[](size_t i) { return Matrix<T>::operator()(i, 0); }
+    const T& operator[](size_t i) const { return Matrix<T>::operator()(i, 0); }
     
     /**
      * @brief 获取向量维度
      * @return 向量维度
      */
-    size_t size() const noexcept { return data.size(); }
+    size_t size() const { return Matrix<T>::get_rows(); }
 
     /**
-     * @brief 向量加法
-     * @param rhs 右操作数
-     * @return 和向量
-     * @throw std::runtime_error 维度不匹配时抛出
+     * @brief 计算向量的范数
+     * @return 向量的2-范数
      */
-    Vector operator+(const Vector& rhs) const {
-        if (size() != rhs.size()) {
-            throw std::runtime_error("向量维度不匹配");
-        }
-        Vector result(size());
-        for (size_t i = 0; i < size(); ++i) {
-            result[i] = data[i] + rhs[i];
-        }
-        return result;
-    }
-
-    /**
-     * @brief 向量减法
-     * @param rhs 右操作数
-     * @return 差向量
-     * @throw std::runtime_error 维度不匹配时抛出
-     */
-    Vector operator-(const Vector& rhs) const {
-        if (size() != rhs.size()) {
-            throw std::runtime_error("向量维度不匹配");
-        }
-        Vector result(size());
-        for (size_t i = 0; i < size(); ++i) {
-            result[i] = data[i] - rhs[i];
-        }
-        return result;
-    }
-
-    /**
-     * @brief 计算向量点积
-     * @param rhs 右操作数
-     * @return 点积结果
-     * @throw std::runtime_error 维度不匹配时抛出
-     */
-    T dot(const Vector& rhs) const {
-        if (size() != rhs.size()) {
-            throw std::runtime_error("向量维度不匹配");
-        }
-        T result = T();
-        for (size_t i = 0; i < size(); ++i) {
-            result += data[i] * rhs[i];
-        }
-        return result;
-    }
-
-    /**
-     * @brief 向量标量乘法
-     * @param scalar 标量值
-     * @return 乘积向量
-     */
-    Vector operator*(const T& scalar) const {
-        Vector result(size());
-        for (size_t i = 0; i < size(); ++i) {
-            result[i] = data[i] * scalar;
-        }
-        return result;
+    T norm() const {
+        return std::sqrt(this->dot(*this));
     }
 };
 
@@ -188,13 +152,68 @@ public:
     }
 
     /**
-     * @brief 访问矩阵元素
+     * @brief 使用单个索引访问矩阵元素（按列优先顺序）
+     * @param idx 线性索引
+     * @return 对元素的引用
+     * @throw std::out_of_range 索引越界时抛出
+     */
+    T& operator[](size_t idx) {
+        if (idx >= rows * cols) {
+            throw std::out_of_range("矩阵索引越界");
+        }
+        size_t i = idx / cols;  // 行索引
+        size_t j = idx % cols;  // 列索引
+        return data[i][j];
+    }
+
+    /**
+     * @brief 使用单个索引访问矩阵元素（常量版本）
+     */
+    const T& operator[](size_t idx) const {
+        if (idx >= rows * cols) {
+            throw std::out_of_range("矩阵索引越界");
+        }
+        size_t i = idx / cols;
+        size_t j = idx % cols;
+        return data[i][j];
+    }
+
+    /**
+     * @brief 使用(i,j)访问矩阵元素
      * @param i 行索引
      * @param j 列索引
      * @return 对元素的引用
+     * @throw std::out_of_range 索引越界时抛出
      */
-    T& operator()(size_t i, size_t j) noexcept { return data[i][j]; }
-    const T& operator()(size_t i, size_t j) const noexcept { return data[i][j]; }
+    T& operator()(size_t i, size_t j) {
+        if (i >= rows || j >= cols) {
+            throw std::out_of_range("矩阵索引越界");
+        }
+        return data[i][j];
+    }
+
+    /**
+     * @brief 使用(i,j)访问矩阵元素（常量版本）
+     */
+    const T& operator()(size_t i, size_t j) const {
+        if (i >= rows || j >= cols) {
+            throw std::out_of_range("矩阵索引越界");
+        }
+        return data[i][j];
+    }
+
+    /**
+     * @brief 获取矩阵的标量值（仅适用于1x1矩阵）
+     * @return 矩阵的标量值
+     * @throw std::runtime_error 矩阵不是1x1时抛出
+     */
+    T scalar() const {
+        if (rows != 1 || cols != 1) {
+            throw std::runtime_error("只有1x1矩阵可以转换为标量");
+        }
+        return data[0][0];
+    }
+
     /**
      * @brief 获取矩阵行数
      * @return 行数
@@ -401,6 +420,156 @@ public:
         }
         return det;
     }
+
+    /**
+     * @brief 计算矩阵每列的最大值
+     * @return 行向量，包含每列的最大值
+     */
+    Matrix max() const {
+        if (rows == 0 || cols == 0) {
+            throw std::runtime_error("空矩阵无法计算最大值");
+        }
+        Matrix result(1, cols);  // 创建1×n的行向量
+        for (size_t j = 0; j < cols; ++j) {
+            T max_val = data[0][j];
+            for (size_t i = 1; i < rows; ++i) {
+                if (data[i][j] > max_val) {
+                    max_val = data[i][j];
+                }
+            }
+            result(0, j) = max_val;
+        }
+        return result;
+    }
+
+    /**
+     * @brief 计算矩阵元素的绝对值
+     * @return 新矩阵，每个元素都是原矩阵对应元素的绝对值
+     */
+    Matrix abs() const {
+        Matrix result(rows, cols);
+        for (size_t i = 0; i < rows; ++i) {
+            for (size_t j = 0; j < cols; ++j) {
+                result(i,j) = std::abs(data[i][j]);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * @brief 计算两个矩阵对应元素的最大值
+     * @param rhs 右操作数
+     * @return 新矩阵，每个元素是两个矩阵对应位置元素的最大值
+     * @throw std::runtime_error 维度不匹配时抛出
+     */
+    Matrix max(const Matrix& rhs) const {
+        if (rows != rhs.rows || cols != rhs.cols) {
+            throw std::runtime_error("矩阵维度不匹配");
+        }
+        Matrix result(rows, cols);
+        for (size_t i = 0; i < rows; ++i) {
+            for (size_t j = 0; j < cols; ++j) {
+                result(i,j) = std::max(data[i][j], rhs(i,j));
+            }
+        }
+        return result;
+    }
+
+    /**
+     * @brief 打印矩阵到输出流
+     * @param os 输出流
+     * @param precision 数值精度
+     */
+    void print(std::ostream& os = std::cout, int precision = 4) const {
+        // 保存原始格式设置
+        auto old_flags = os.flags();
+        auto old_precision = os.precision();
+        
+        // 设置新的格式
+        os.precision(precision);
+        os.setf(std::ios::fixed);
+        
+        // 计算每列的最大宽度
+        std::vector<size_t> col_widths(cols);
+        for (size_t j = 0; j < cols; ++j) {
+            col_widths[j] = 0;
+            for (size_t i = 0; i < rows; ++i) {
+                std::ostringstream ss;
+                ss.precision(precision);
+                ss.setf(std::ios::fixed);
+                ss << data[i][j];
+                col_widths[j] = std::max(col_widths[j], ss.str().length());
+            }
+        }
+        
+        // 打印矩阵
+        for (size_t i = 0; i < rows; ++i) {
+            // 打印左括号
+            os << (i == 0 ? "⎡" : (i == rows - 1 ? "⎣" : "⎢"));
+            
+            // 打印数据
+            for (size_t j = 0; j < cols; ++j) {
+                std::ostringstream ss;
+                ss.precision(precision);
+                ss.setf(std::ios::fixed);
+                ss << data[i][j];
+                std::string num = ss.str();
+                
+                // 右对齐
+                os << std::string(col_widths[j] - num.length() + 1, ' ') << num;
+                
+                // 在数字之间添加适当的空格
+                if (j < cols - 1) os << " ";
+            }
+            
+            // 打印右括号
+            os << (i == 0 ? " ⎤" : (i == rows - 1 ? " ⎦" : " ⎥"));
+            os << "\n";
+        }
+        
+        // 恢复原始格式设置
+        os.flags(old_flags);
+        os.precision(old_precision);
+    }
+
+    /**
+     * @brief 重载输出运算符
+     */
+    friend std::ostream& operator<<(std::ostream& os, const Matrix& mat) {
+        mat.print(os);
+        return os;
+    }
 };
+
+/**
+ * @brief 计算矩阵每列的最大值
+ * @param mat 输入矩阵
+ * @return 行向量，包含每列的最大值
+ */
+template<typename T>
+Matrix<T> max(const Matrix<T>& mat) {
+    return mat.max();
+}
+
+/**
+ * @brief 计算两个矩阵对应元素的最大值
+ * @param lhs 左操作数
+ * @param rhs 右操作数
+ * @return 新矩阵，每个元素是两个矩阵对应位置元素的最大值
+ */
+template<typename T>
+Matrix<T> max(const Matrix<T>& lhs, const Matrix<T>& rhs) {
+    return lhs.max(rhs);
+}
+
+/**
+ * @brief 计算矩阵元素的绝对值
+ * @param mat 输入矩阵
+ * @return 新矩阵，每个元素都是原矩阵对应元素的绝对值
+ */
+template<typename T>
+Matrix<T> abs(const Matrix<T>& mat) {
+    return mat.abs();
+}
 
 } // namespace linalg
