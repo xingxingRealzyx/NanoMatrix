@@ -539,6 +539,21 @@ public:
         mat.print(os);
         return os;
     }
+
+    /**
+     * @brief 矩阵与标量相乘
+     * @param scalar 标量值
+     * @return 乘积矩阵
+     */
+    Matrix operator*(T scalar) const {
+        Matrix result(rows, cols);
+        for (size_t i = 0; i < rows; ++i) {
+            for (size_t j = 0; j < cols; ++j) {
+                result(i, j) = data[i][j] * scalar;
+            }
+        }
+        return result;
+    }
 };
 
 /**
@@ -570,6 +585,17 @@ Matrix<T> max(const Matrix<T>& lhs, const Matrix<T>& rhs) {
 template<typename T>
 Matrix<T> abs(const Matrix<T>& mat) {
     return mat.abs();
+}
+
+/**
+ * @brief 标量与矩阵相乘（左乘）
+ * @param scalar 标量值
+ * @param mat 矩阵
+ * @return 乘积矩阵
+ */
+template<typename T>
+Matrix<T> operator*(T scalar, const Matrix<T>& mat) {
+    return mat * scalar;  // 复用矩阵右乘标量的实现
 }
 
 } // namespace linalg
